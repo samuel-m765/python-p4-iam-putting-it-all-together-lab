@@ -8,9 +8,8 @@ from sqlalchemy.exc import IntegrityError
 from config import app, db, api
 from models import User, Recipe
 
-# Initialize Migrate with app and db
+# Initialize Migrate
 migrate = Migrate(app, db)
-
 
 EXEMPT_ROUTES = ['/signup', '/login', '/check_session']
 
@@ -30,12 +29,11 @@ class Signup(Resource):
                 image_url=data.get("image_url"),
                 bio=data.get("bio")
             )
-            new_user.password_hash = data.get("password")
+            new_user.password_hash = data.get("password")  # Required to avoid _password_hash NULL
             db.session.add(new_user)
             db.session.commit()
 
             session['user_id'] = new_user.id
-
             return new_user.to_dict(), 201
 
         except IntegrityError:
@@ -45,12 +43,11 @@ class Signup(Resource):
         except Exception as e:
             return {'errors': str(e)}, 422
 
-
 class CheckSession(Resource):
     def get(self):
         user_id = session.get("user_id")
         if user_id:
-            user = db.session.get(User,user_id)
+            user = db.session.get(User, user_id)
             return user.to_dict(), 200
         return {"error": "Unauthorized"}, 401
 
@@ -76,17 +73,15 @@ class RecipeIndex(Resource):
 
     def post(self):
         data = request.get_json()
-
         try:
             new_recipe = Recipe(
                 title=data.get("title"),
                 instructions=data.get("instructions"),
                 minutes_to_complete=data.get("minutes_to_complete"),
-                user_id=session.get("user_id")
+                user_id=session.get("user_id")  # Ensures it's not NULL
             )
             db.session.add(new_recipe)
             db.session.commit()
-
             return new_recipe.to_dict(), 201
 
         except IntegrityError:
@@ -101,7 +96,6 @@ api.add_resource(CheckSession, '/check_session', endpoint='check_session')
 api.add_resource(Login, '/login', endpoint='login')
 api.add_resource(Logout, '/logout', endpoint='logout')
 api.add_resource(RecipeIndex, '/recipes', endpoint='recipes')
-
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)
